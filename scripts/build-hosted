@@ -1,0 +1,43 @@
+#!/bin/bash
+set -e
+
+BUILD_DEBUG="${BUILD_DEBUG:-}"
+if [[ -n "${BUILD_DEBUG}" ]]; then
+    set -x
+    env
+fi
+
+cd $(dirname $0)/..
+
+echo "Bootstrapping..."
+yarn --pure-lockfile install
+
+# source scripts/version
+echo "BRANCH: ${COMMIT_BRANCH:-<none>}"
+echo "TAG: ${GIT_TAG:-<none>}"
+# DIR=${GIT_TAG:-$COMMIT_BRANCH}
+
+# Rio is stuck pointing at the "master" folder, use "latest" instead.
+# if [[ "${DIR}" == "master" ]]; then
+  DIR="latest"
+# fi
+
+BASE=https://haruna.oss-cn-shenzhen.aliyuncs.com/${DIR}
+
+echo "Building for ${BASE}..."
+
+NUXT_ENV_commit=${COMMIT} NUXT_ENV_version=${VERSION} OUTPUT_DIR=dist/${DIR} ROUTER_BASE="/" RESOURCE_BASE="${BASE}" yarn run build --spa
+
+cp -rf dist/latest dist/bak
+
+echo "Building for tgz"
+NUXT_ENV_commit=${COMMIT} NUXT_ENV_version=${VERSION} OUTPUT_DIR=dist/${DIR} ROUTER_BASE="/" RESOURCE_BASE="./" yarn run build --spa
+TARBALL=${DIR}.tar.gz
+echo "Compressing to ${TARBALL}..."
+tar -czf dist/${TARBALL} dist/${DIR}/
+
+rm -rf dist/latest
+
+mv dist/bak dist/latest
+
+ls -alR dist/

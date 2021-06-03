@@ -1,0 +1,14 @@
+@import '~vue2-datepicker/scss/index.scss';
+
+.#{$namespace}-datepicker {
+  width: 100%;
+}
+
+.#{$namespace}-input {
+  height: 49px;
+
+  &:hover,
+  &:focus {
+    border-color: transparent;
+  }
+}
