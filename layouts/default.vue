@@ -58,12 +58,16 @@ export default {
     getGroups() {
       const out = [{
         children: [{
-          label:        '概览',
-          labelDisplay: `<i class="icon icon-fw icon-preview mr-5"></i>概览`,
+          label:        'report',
+          labelDisplay: `<i class="icon icon-fw icon-preview mr-5"></i>报告`,
           name:         'preview',
           weight:       100,
           route:        {
-            name: 'c-cluster-inspect-preview',
+            name:   'c-cluster-product-resource',
+            params: {
+              product:  'inspect',
+              resource: 'report',
+            },
           },
           enabled: true,
         }].filter(m => m.enabled)

@@ -1,5 +1,5 @@
 <script>
-import ResourceList from '@/components/origin/ResourceList'
+import ResourceList from '@/components/ResourceList'
 
 export default {
   name:       'ClusterResourcedList',

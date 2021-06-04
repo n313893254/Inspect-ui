@@ -20,21 +20,7 @@ export default async function({
   await applyProducts(store)
 
   try {
-    await store.dispatch('loadRancher')
-
-    let clusterId = get(route, 'params.cluster')
-
-    if (clusterId) {
-      await allHash({
-        loadCluster: store.dispatch('loadCluster', clusterId),
-      })
-    } else {
-      clusterId = store.getters['defaultClusterId']
-
-      await allHash({
-        loadCluster: store.dispatch('loadCluster', clusterId),
-      })
-    }
+    await store.dispatch('loadInspect')
   } catch (e) {
     console.log(e, 'e')
     // return redirect(302, '/auth/login')

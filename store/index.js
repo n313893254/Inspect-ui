@@ -15,13 +15,14 @@ export const plugins = [
   Steve({ namespace: 'project', baseUrl: '' }),
   Steve({ namespace: 'cluster', baseUrl: '' }),
   Steve({ namespace: 'clusterScope', baseUrl: '' }),
+  Steve({ namespace: 'inspect', baseUrl: '/v1' }),
 ]
 
 export const state = () => {
   return {
     rancherReady:     false,
     clusterId:        null,
-    productId:        'redis',
+    productId:        'inspect',
     namespaceFilters: [],
     clusterReady:     false,
     projectReady:     false,
@@ -300,6 +301,20 @@ export const actions = {
     })
 
     console.log(`Done loading Rancher`) // eslint-disable-line no-console
+  },
+
+  async loadInspect({
+    state, dispatch
+  }) {
+    if (state.inspectReady) {
+      return
+    }
+
+    console.log('Loading Inspect...') // eslint-disable-line no-console
+
+    await dispatch('inspect/loadSchemas', true)
+
+    console.log(`Done loading Inspect`) // eslint-disable-line no-console
   },
 
   async loadCluster({

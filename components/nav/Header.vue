@@ -1,29 +1,11 @@
 <script>
-import ClusterSwitcher from './ClusterSwitcher'
-import { NORMAN } from '@/config/types'
 import { mapGetters } from 'vuex'
 import { NAME as PRODUCT_NAME } from '@/config/product/inspect'
 
 export default {
-  components: {
-    ClusterSwitcher,
-  },
-
   computed: {
     ...mapGetters(['clusterReady', 'isMultiCluster', 'currentCluster',
       'currentProduct', 'backToRancherLink', 'backToRancherGlobalLink']),
-
-    principal() {
-      return this.$store.getters['rancher/byId'](NORMAN.PRINCIPAL, this.$store.getters['auth/principalId']) || {}
-    },
-
-    authEnabled() {
-      return this.$store.getters['auth/enabled']
-    },
-
-    showShell() {
-      return !!this.currentCluster?.links?.shell
-    },
 
     name() {
       return this.$store.getters['i18n/t'](`product.${PRODUCT_NAME}`) || PRODUCT_NAME
@@ -55,53 +37,13 @@ export default {
       </div>
     </div>
 
-    <div class="cluster">
-      <ClusterSwitcher />
-    </div>
+    <div class="cluster" />
 
-    <div class="kubectl">
-      <button v-if="currentProduct" :disabled="!showShell" type="button" class="btn role-tertiary" @click="currentCluster.openShell()">
-        <i v-tooltip="t('nav.shell')" class="icon icon-terminal icon-lg" />
-      </button>
-    </div>
+    <div class="kubectl" />
 
-    <div class="back">
-      <a v-if="currentProduct" class="btn role-tertiary" :href="backToRancherLink">
-        {{ t('nav.backToRancher') }}
-      </a>
-    </div>
+    <div class="back" />
 
-    <div class="user user-menu" tabindex="0" @blur="showMenu(false)" @click="showMenu(true)" @focus.capture="showMenu(true)">
-      <v-popover
-        ref="popover"
-        placement="bottom-end"
-        offset="-10"
-        trigger="manual"
-        :delay="{show: 0, hide: 0}"
-        :popper-options="{modifiers: { flip: { enabled: false } } }"
-        :container="false"
-      >
-        <div class="user-image text-right hand">
-          <img v-if="principal && principal.avatarSrc" :src="principal.avatarSrc" :class="{'avatar-round': principal.roundAvatar}" width="40" height="40">
-          <i v-else class="icon icon-user icon-3x avatar" />
-        </div>
-        <template slot="popover" class="user-menu">
-          <ul class="list-unstyled dropdown" @click.stop="showMenu(false)">
-            <li v-if="authEnabled" class="user-info">
-              <div class="user-name">
-                <i class="icon icon-lg icon-user" /> {{ principal.loginName }}
-              </div>
-              <div class="text-small pt-5 pb-5">
-                {{ principal.name }}
-              </div>
-            </li>
-            <nuxt-link v-if="authEnabled" tag="li" :to="{name: 'auth-logout'}" class="user-menu-item">
-              <a @blur="showMenu(false)">Log Out <i class="icon icon-fw icon-close" /></a>
-            </nuxt-link>
-          </ul>
-        </template>
-      </v-popover>
-    </div>
+    <div class="user user-menu" tabindex="0" @blur="showMenu(false)" @click="showMenu(true)" @focus.capture="showMenu(true)" />
   </header>
 </template>
 

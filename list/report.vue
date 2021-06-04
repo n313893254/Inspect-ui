@@ -1,13 +1,15 @@
 <script>
 import ResourceTable from '@/components/origin/ResourceTable'
 import Loading from '@/components/Loading'
-import Masthead from './Masthead'
+import AsyncButton from '@/components/AsyncButton'
+import Masthead from '@/components/ResourceList/Masthead'
 
 export default {
   components: {
     Loading,
     ResourceTable,
-    Masthead
+    Masthead,
+    AsyncButton,
   },
 
   async fetch() {
@@ -18,21 +20,6 @@ export default {
 
     const inStore = store.getters['currentProduct'].inStore
     const schema = store.getters[`${ inStore }/schemaFor`](resource)
-
-    if ( this.hasListComponent ) {
-      // If you provide your own list then call its asyncData
-      const importer = store.getters['type-map/importList'](resource)
-      const component = (await importer())?.default
-
-      if ( component?.typeDisplay ) {
-        this.customTypeDisplay = component.typeDisplay.apply(this)
-      }
-
-      // If your list page has a fetch then it's responsible for populating rows itself
-      if ( component?.fetch ) {
-        hasFetch = true
-      }
-    }
 
     if ( !hasFetch ) {
       if ( !schema ) {
@@ -50,8 +37,6 @@ export default {
     const params = { ...this.$route.params }
     const resource = params.resource
 
-    const hasListComponent = getters['type-map/hasCustomList'](resource)
-
     const inStore = getters['currentProduct'].inStore
     const schema = getters[`${ inStore }/schemaFor`](resource)
 
@@ -59,7 +44,6 @@ export default {
 
     return {
       schema,
-      hasListComponent,
       showMasthead: showMasthead === undefined ? true : showMasthead,
       resource,
 
@@ -71,11 +55,6 @@ export default {
 
   computed: {
     headers() {
-      if ( this.hasListComponent || !this.schema ) {
-        // Custom lists figure out their own headers
-        return []
-      }
-
       return this.$store.getters['type-map/headersFor'](this.schema)
     },
 
@@ -85,38 +64,50 @@ export default {
 
   },
 
-  created() {
-    let listComponent = false
+  methods: {
+    async refreshReport(buttonDone) {
+      try {
+        await this.$store.dispatch('inspect/request', {
+          url:           '/v1/reports?action=createReport',
+          method:        'post',
+          data:          { },
+        })
 
-    const resource = this.$route.params.resource
-    const hasListComponent = this.$store.getters['type-map/hasCustomList'](resource)
-
-    if ( hasListComponent ) {
-      listComponent = this.$store.getters['type-map/importList'](resource)
-    }
-
-    this.listComponent = listComponent
+        buttonDone(true)
+      } catch (err) {
+        this.$store.dispatch('growl/fromError', { title: '运行健康检查失败', err }, { root: true })
+        buttonDone(false)
+      }
+    },
   },
-
-}; </script>
+} 
+</script>
 
 <template>
   <Loading v-if="$fetchState.pending" />
   <div v-else>
     <Masthead
-      v-if="showMasthead"
       :type-display="customTypeDisplay"
       :schema="schema"
       :resource="resource"
+    >
+      <template slot="extraActions">
+        <AsyncButton
+          mode="refresh"
+          :action-label="t('inspect.report.create')"
+          :waiting-label="t('inspect.report.create')"
+          :success-label="t('inspect.report.create')"
+          :error-label="t('inspect.report.create')"
+          @click="refreshReport"
+        />
+      </template>
+    </Masthead>
+    <ResourceTable 
+      :schema="schema" 
+      :rows="rows" 
+      :headers="headers" 
+      :group-by="groupBy" 
     />
-
-    <div v-if="hasListComponent">
-      <component
-        :is="listComponent"
-        v-bind="$data"
-      />
-    </div>
-    <ResourceTable v-else :schema="schema" :rows="rows" :headers="headers" :group-by="groupBy" />
   </div>
 </template>
 

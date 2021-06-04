@@ -11,6 +11,6 @@ export function init(store) {
     weight:              3,
     showNamespaceFilter: false,
     icon:                'compass',
-    inStore:             'cluster',
+    inStore:             'inspect',
   })
 }

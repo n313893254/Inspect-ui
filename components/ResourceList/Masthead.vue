@@ -1,42 +1,131 @@
 <script>
-import ButtonDropdown from '@/components/ButtonDropdown'
-import Banner from '@/components/Banner'
+import { mapGetters } from 'vuex'
+import Favorite from '@/components/nav/Favorite'
+import TypeDescription from '@/components/TypeDescription'
+import { get } from '@/utils/object'
+import { AS, _YAML } from '@/config/query-params'
+import { findBy } from '@/utils/array'
 
 export default {
   components: {
-    ButtonDropdown,
-    Banner,
+    Favorite,
+    TypeDescription,
   },
-
   props: {
-    typeDisplay: {
-      type:    String,
-      default: ''
+    resource: {
+      type:     String,
+      required: true,
     },
-    createLocation: {
-      type:    Object,
-      default: null
-    },
-    banner: {
+    schema: {
       type:    Object,
       default: null,
     },
-    createLable: {
+    typeDisplay: {
       type:    String,
       default: null,
     },
     isCreatable: {
       type:    Boolean,
-      default: false
+      default: null,
     },
     isYamlCreatable: {
       type:    Boolean,
-      default: false,
+      default: null,
     },
-
+    createLocation: {
+      type:    Object,
+      default: null,
+    },
     yamlCreateLocation: {
       type:    Object,
       default: null,
+    },
+  },
+
+  data() {
+    const params = { ...this.$route.params }
+    const resource = params.resource
+
+    const formRoute = { name: `${ this.$route.name }-create`, params }
+
+    const hasEditComponent = this.$store.getters['type-map/hasCustomEdit'](resource)
+
+    const yamlRoute = {
+      name:  `${ this.$route.name }-create`,
+      params,
+      query: { [AS]: _YAML },
+    }
+
+    return {
+      formRoute,
+      yamlRoute,
+      hasEditComponent,
+    }
+  },
+
+  computed: {
+    get,
+    ...mapGetters(['isExplorer']),
+
+    resourceName() {
+      if (this.schema) {
+        return this.$store.getters['type-map/labelFor'](this.schema)
+      }
+
+      return this.resource
+    },
+
+    _typeDisplay() {
+      if ( this.typeDisplay !== null) {
+        return this.typeDisplay
+      }
+
+      if ( !this.schema ) {
+        return '?'
+      }
+
+      return this.$store.getters['type-map/labelFor'](this.schema, 99)
+    },
+
+    _isYamlCreatable() {
+      if ( this.isYamlCreatable !== null) {
+        return this.isYamlCreatable
+      }
+
+      return this.schema && this._isCreatable && this.$store.getters['type-map/optionsFor'](this.$route.params.resource).canYaml
+    },
+
+    _isCreatable() {
+      // Does not take into account hasEditComponent, such that _isYamlCreatable works
+      if ( this.isCreatable !== null) {
+        return this.isCreatable
+      }
+
+      if ( this.schema && !this.schema?.collectionMethods.find(x => x.toLowerCase() === 'post') ) {
+        return false
+      }
+
+      return this.$store.getters['type-map/optionsFor'](this.$route.params.resource).isCreatable
+    },
+
+    _createLocation() {
+      return this.createLocation || this.formRoute
+    },
+
+    _yamlCreateLocation() {
+      return this.yamlCreateLocation || this.yamlRoute
+    },
+
+    auditEnabled() {
+      const apps = this.$store.getters[`project/all`]('app')
+      const redisOperator = findBy(apps, 'name', 'redis-operator')
+
+      if (!redisOperator) {
+        return false
+      }
+
+      const answers = redisOperator.answers || {}
+      return answers['global.enableAudit'] === 'true'
     },
   },
 }
@@ -44,86 +133,31 @@ export default {
 
 <template>
   <header>
-    <Banner
-      v-if="banner"
-      :color="banner.color" 
-      :label="banner.label" 
-      class="type-banner"
-    />
-    <h1>
-      {{ typeDisplay }}
-    </h1>
-    <div class="actions">
-      <ButtonDropdown v-if="isCreatable || isYamlCreatable">
-        <template #button-content="slotProps">
-          <nuxt-link
-            :to="createLocation"
-            class="btn bg-transparent"
-            :class="slotProps.buttonSize"
-          >
-            {{ createLable ? createLable : t("resourceList.head.create") }}
-          </nuxt-link>
-        </template>
-        <template
-          slot="popover-content"
+    <TypeDescription :resource="resource" />
+    <div class="title">
+      <h1 class="m-0">
+        {{ _typeDisplay }} <Favorite v-if="isExplorer" :resource="resource" />
+      </h1>
+    </div>
+    <div class="actions-container">
+      <div class="actions">
+        <slot name="extraActions" />
+
+        <n-link
+          v-if="hasEditComponent && _isCreatable"
+          :to="_createLocation"
+          class="btn role-primary"
         >
-          <ul class="list-unstyled menu pt-10 pb-10" style="margin: -1px;">
-            <li class="hand">
-              <nuxt-link
-                v-if="isCreatable"
-                :to="createLocation"
-              >
-                {{ createLable ? createLable : t("resourceList.head.create") }}
-              </nuxt-link>
-            </li>
-            <li class="divider">
-              <div class="divider-inner" />
-            </li>
-            <li class="hand">
-              <nuxt-link
-                v-if="isYamlCreatable"
-                :to="yamlCreateLocation"
-              >
-                {{ t("resourceList.head.createFromYaml") }}
-              </nuxt-link>
-            </li>
-          </ul>
-        </template>
-      </ButtonDropdown>
+          {{ t("resourceList.head.create") }}
+        </n-link>
+        <n-link
+          v-else-if="_isYamlCreatable"
+          :to="_yamlCreateLocation"
+          class="btn role-primary"
+        >
+          {{ t("resourceList.head.createFromYaml") }}
+        </n-link>
+      </div>
     </div>
   </header>
 </template>
-
-<style lang="scss" scoped>
-  HEADER {
-    display: grid;
-    grid-template-areas:  "type-banner type-banner"
-                          "title actions"
-                          "state-banner state-banner";
-    grid-template-columns: auto min-content;
-    margin-bottom: 20px;
-    align-items: center;
-
-    H1 {
-      grid-area: title;
-      margin: 0;
-    }
-
-    .type-banner {
-      grid-area: type-banner;
-    }
-
-    .state-banner {
-      grid-area: state-banner;
-    }
-
-    .title {
-      grid-area: title;
-    }
-
-    .actions {
-      grid-area: actions;
-      text-align: right;
-    }
-  }
-</style>

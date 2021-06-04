@@ -1,121 +1,122 @@
 <script>
+import ResourceTable from '@/components/origin/ResourceTable'
+import Loading from '@/components/Loading'
 import Masthead from './Masthead'
-import ResourceTable from '@/components/ResourceTable'
-import { AS_YAML, _FLAGGED } from '@/config/query-params'
 
 export default {
   components: {
-    Masthead,
+    Loading,
     ResourceTable,
+    Masthead
   },
-  
-  props: {
-    typeDisplay: {
-      type:    String,
-      default: '',
-    },
-    banner: {
-      type:    Object,
-      default: null,
-    },
-    createLable: {
-      type:    String,
-      default: null,
-    },
-    rows: {
-      type:     Array,
-      required: true
-    },
-    headers: {
-      type:    Array,
-      default: null,
-    },
-    isCreatable: {
-      type:    Boolean,
-      default: false,
-    },
-    rowActions: {
-      type:    Boolean,
-      default: true,
-    },
-    showGroups: {
-      type:    Boolean,
-      default: true,
-    },
-    isYamlCreatable: {
-      type:    Boolean,
-      default: true,
-    },
-    subRows: {
-      // If there are sub-rows, your main row must have <tr class="main-row"> to identify it
-      type:    Boolean,
-      default: false,
-    },
-    schema: {
-      type:    Boolean,
-      default: () => {}
-    },
-    tableActions: {
-      // Show bulk table actions
-      type:    Boolean,
-      default: true
-    },
 
-    search: {
-      // Show search input to filter rows
-      type:    Boolean,
-      default: true
-    },
+  async fetch() {
+    const store = this.$store
+    const resource = this.resource
+
+    let hasFetch = false
+
+    const inStore = store.getters['currentProduct'].inStore
+    const schema = store.getters[`${ inStore }/schemaFor`](resource)
+    
+    if ( this.hasListComponent ) {
+      // If you provide your own list then call its asyncData
+      const importer = store.getters['type-map/importList'](resource)
+      const component = (await importer())?.default
+
+      if ( component?.typeDisplay ) {
+        this.customTypeDisplay = component.typeDisplay.apply(this)
+      }
+
+      // If your list page has a fetch then it's responsible for populating rows itself
+      if ( component?.fetch ) {
+        hasFetch = true
+      }
+    }
+
+    if ( !hasFetch ) {
+      if ( !schema ) {
+        store.dispatch('loadingError', `Type ${ resource } not found`)
+
+        return
+      }
+
+      this.rows = await store.dispatch(`${ inStore }/findAll`, { type: resource })
+    }
   },
 
   data() {
+    const getters = this.$store.getters
     const params = { ...this.$route.params }
-    const formRoute = { name: `${ this.$route.name }-create`, params }
+    const resource = params.resource
 
-    const query = { [AS_YAML]: _FLAGGED }
+    const hasListComponent = getters['type-map/hasCustomList'](resource)
 
-    const yamlRoute = {
-      name: `${ this.$route.name }-create-yaml`,
-      params,
-      query
-    }
+    const inStore = getters['currentProduct'].inStore
+    const schema = getters[`${ inStore }/schemaFor`](resource)
+
+    const showMasthead = getters[`type-map/optionsFor`](resource).showListMasthead
 
     return {
-      formRoute,
-      yamlRoute,
+      schema,
+      hasListComponent,
+      showMasthead: showMasthead === undefined ? true : showMasthead,
+      resource,
+
+      // Provided by fetch later
+      rows:              null,
+      customTypeDisplay: null,
     }
   },
 
   computed: {
+    headers() {
+      if ( this.hasListComponent || !this.schema ) {
+        // Custom lists figure out their own headers
+        return []
+      }
+
+      return this.$store.getters['type-map/headersFor'](this.schema)
+    },
+
     groupBy() {
       return this.$store.getters['type-map/groupByFor'](this.schema)
     },
+
   },
-}
-</script>
+
+  created() {
+    let listComponent = false
+
+    const resource = this.$route.params.resource
+    const hasListComponent = this.$store.getters['type-map/hasCustomList'](resource)
+
+    if ( hasListComponent ) {
+      listComponent = this.$store.getters['type-map/importList'](resource)
+    }
+
+    this.listComponent = listComponent
+  },
+
+}; </script>
 
 <template>
-  <div>
-    <Masthead 
-      :type-display="typeDisplay"
-      :create-location="formRoute"
-      :banner="banner"
-      :create-lable="createLable"
-      :is-creatable="isCreatable"
-      :is-yaml-creatable="isYamlCreatable"
-      :yaml-create-location="yamlRoute"
+  <Loading v-if="$fetchState.pending" />
+  <div v-else>
+    <Masthead
+      v-if="showMasthead"
+      :type-display="customTypeDisplay"
+      :schema="schema"
+      :resource="resource"
     />
-    <ResourceTable 
-      :rows="rows"
-      :headers="headers"
-      :row-actions="rowActions"
-      :show-groups="showGroups"
-      :sub-rows="subRows"
-      :groupable="showGroups"
-      :group-by="groupBy"
-      :table-actions="tableActions"
-      :search="search"
-    />
+
+    <div v-if="hasListComponent">
+      <component
+        :is="listComponent"
+        v-bind="$data"
+      />
+    </div>
+    <ResourceTable v-else :schema="schema" :rows="rows" :headers="headers" :group-by="groupBy" />
   </div>
 </template>
 

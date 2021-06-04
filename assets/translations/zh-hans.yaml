@@ -1627,60 +1627,7 @@ typeDescription:
   resources.cattle.io.resourceset: 资源集定义了要在备份中存储哪些CRD和资源。
 
 typeLabel:
-  catalog.cattle.io.app: |-
-    {count, plural,
-      one { 安装应用 }
-      other { 安装应用 }
-    }
-  catalog.cattle.io.clusterrepo: |-
-    {count, plural,
-      one { 仓库 }
-      other { 仓库 }
-    }
-  chartInstallAction: |-
-    {count, plural,
-      one { 应用 }
-      other { 应用 }
-    }
-  chartUpgradeAction: |-
-    {count, plural,
-      one { 应用 }
-      other { 应用 }
-    }
-  endpoints: |-
-    {count, plural,
-      one { 访问地址 }
-      other { 访问地址 }
-    }
-  fleet.cattle.io.cluster: |-
-    {count, plural,
-      =1 { 集群 }
-      other { 集群 }
-    }
-  fleet.cattle.io.gitrepo: |-
-    {count, plural,
-      one { Git 仓库 }
-      other {Git 仓库 }
-    }
-  monitoring.coreos.com.prometheusrule: |-
-    {count, plural,
-      one { Prometheus 规则 }
-      other { Prometheus 规则 }
-    }
-  monitoring.coreos.com.thanosruler: |-
-    {count, plural,
-      one { Thanos 规则 }
-      other { Thanos 规则 }
-    }
-  service: 集群
-  redis.cattle.io.backup: 备份
-  redis.cattle.io.clusteredredis: 集群Redis
-  redis.cattle.io.redis: 哨兵Redis
-  redis: Redis服务
-  audit: 审核
-  redis.cattle.io.clusteredredisaudit: 集群Redis
-  redis.cattle.io.redisaudit: 哨兵Redis
-  redis.cattle.io.backupaudit: 备份
+  report: 报表
 
 redis:
   typeDescriptions: 
@@ -1750,3 +1697,7 @@ action:
   copy: 复制
   unassign: 取消分配
   goToClone: 克隆配置
+
+inspect:
+  report:
+    create: 运行检查
