@@ -1,17 +1,20 @@
 <script>
+import { KUBERNETES, PROJECT } from '@/config/labels-annotations'
+import { FLEET, NAMESPACE, MANAGEMENT } from '@/config/types'
 import ButtonGroup from '@/components/ButtonGroup'
-import {
-  AS, _DETAIL, _CONFIG, _YAML, MODE, _CREATE, _VIEW, _UNFLAG
-} from '@/config/query-params'
 import BadgeState from '@/components/BadgeState'
+import Banner from '@/components/Banner'
 import { get } from '@/utils/object'
+import { NAME as FLEET_NAME } from '@/config/product/fleet'
+import { HIDE_SENSITIVE } from '@/store/prefs'
+import {
+  AS, _DETAIL, _CONFIG, _YAML, MODE, _CREATE, _EDIT, _VIEW, _UNFLAG, _MONITORING
+} from '@/config/query-params'
 
 export default {
   components: {
-    ButtonGroup,
-    BadgeState,
+    BadgeState, Banner, ButtonGroup
   },
-
   props:      {
     value: {
       type:    Object,
@@ -19,33 +22,10 @@ export default {
         return {}
       }
     },
-    header: {
-      type:    String,
-      default: '',
-    },
+
     mode: {
       type:    String,
-      default: 'view',
-    },
-
-    hasDetail: {
-      type:    Boolean,
-      default: false
-    },
-
-    as: {
-      type:    String,
-      default: _YAML,
-    },
-
-    hasMonitoring: {
-      type:    Boolean,
-      default: false,
-    },
-
-    parent: {
-      type:    Object,
-      default: () => ({}),
+      default: 'create'
     },
 
     realMode: {
@@ -53,19 +33,68 @@ export default {
       default: 'create'
     },
 
+    as: {
+      type:    String,
+      default: _YAML,
+    },
+
+    hasDetail: {
+      type:    Boolean,
+      default: false
+    },
+
+    hasEdit: {
+      type:    Boolean,
+      default: false
+    },
+
+    hasMonitoring: {
+      type:    Boolean,
+      default: false
+    },
+
+    storeOverride: {
+      type:    String,
+      default: null,
+    },
+
+    resource: {
+      type:    String,
+      default: null,
+    },
+
     resourceSubtype: {
+      type:    String,
+      default: null,
+    },
+
+    parentRouteOverride: {
       type:    String,
       default: null,
     }
   },
-  
+
   computed: {
+    schema() {
+      const inStore = this.storeOverride || this.$store.getters['currentProduct'].inStore
+
+      return this.$store.getters[`${ inStore }/schemaFor`]( this.resource )
+    },
+
     isView() {
       return this.mode === _VIEW
     },
 
+    isEdit() {
+      return this.mode === _EDIT
+    },
+
     isCreate() {
       return this.mode === _CREATE
+    },
+
+    isNamespace() {
+      return this.schema?.id === NAMESPACE
     },
 
     namespace() {
@@ -74,6 +103,113 @@ export default {
       }
 
       return null
+    },
+
+    namespaceLocation() {
+      if (!this.isNamespace) {
+        return {
+          name:   'c-cluster-product-resource-id',
+          params: {
+            cluster:  this.$route.params.cluster,
+            product:  this.$store.getters['productId'],
+            resource: NAMESPACE,
+            id:       this.$route.params.namespace
+          }
+        }
+      }
+
+      return null
+    },
+
+    isWorkspace() {
+      return this.$store.getters['productId'] === FLEET_NAME && !!this.value?.metadata?.namespace
+    },
+
+    workspaceLocation() {
+      return {
+        name:   'c-cluster-product-resource-id',
+        params: {
+          cluster:  this.$route.params.cluster,
+          product:  this.$store.getters['productId'],
+          resource: FLEET.WORKSPACE,
+          id:       this.$route.params.namespace
+        }
+      }
+    },
+
+    project() {
+      if (this.isNamespace) {
+        const id = (this.value?.metadata?.labels || {})[PROJECT]
+        const clusterId = this.$store.getters['currentCluster'].id
+
+        return this.$store.getters['management/byId'](MANAGEMENT.PROJECT, `${ clusterId }/${ id }`)
+      } else {
+        return null
+      }
+    },
+
+    banner() {
+      if (this.value?.metadata?.state?.error) {
+        const defaultErrorMessage = this.t('resourceDetail.masthead.defaultBannerMessage.error', undefined, true)
+
+        return {
+          color:   'error',
+          message: this.value.metadata.state.message || defaultErrorMessage
+        }
+      }
+
+      if (this.value?.metadata?.state?.transitioning) {
+        const defaultTransitioningMessage = this.t('resourceDetail.masthead.defaultBannerMessage.transitioning', undefined, true)
+
+        return {
+          color:   'info',
+          message: this.value.metadata.state.message || defaultTransitioningMessage
+        }
+      }
+
+      return null
+    },
+
+    parent() {
+      const displayName = this.$store.getters['type-map/labelFor'](this.schema)
+
+      const location = {
+        name:   `c-cluster-product-resource`,
+        params: {
+          product:  'redis',
+          resource: this.resource,
+        }
+      }
+
+      if (this.parentRouteOverride) {
+        location.name = this.parentRouteOverride
+      }
+
+      const typeOptions = this.$store.getters[`type-map/optionsFor`]( this.resource )
+      const out = {
+        displayName, location, ...typeOptions
+      }
+
+      return out
+    },
+
+    hideSensitiveData() {
+      return this.$store.getters['prefs/get'](HIDE_SENSITIVE)
+    },
+
+    sensitiveOptions() {
+      return [
+        {
+          tooltipKey: 'resourceDetail.masthead.sensitive.hide',
+          icon:       'icon-hide',
+          value:      true,
+        },
+        {
+          tooltipKey: 'resourceDetail.masthead.sensitive.show',
+          icon:       'icon-show',
+          value:      false
+        }
+      ]
     },
 
     viewOptions() {
@@ -95,9 +231,9 @@ export default {
 
       if (this.hasMonitoring) {
         out.push({
-          label: '监控',
-          value: 'monitoring',
-        })        
+          labelKey: 'resourceDetail.masthead.monitoring',
+          value:    'monitoring',
+        })
       }
 
       if ( !out.length ) {
@@ -121,9 +257,9 @@ export default {
       set(val) {
         switch ( val ) {
         case _DETAIL:
-          this.$router.push({
-            name:   (this.$router.currentRoute.name || '').replace('-yaml', '').replace('-monitoring', ''),
-            params: this.$router.currentRoute.params,
+          this.$router.applyQuery({
+            [MODE]: _UNFLAG,
+            [AS]:   _UNFLAG,
           })
           break
         case _CONFIG:
@@ -132,33 +268,57 @@ export default {
             [AS]:   _CONFIG,
           })
           break
-        case 'yaml':
-          this.$router.push({
-            name:   `${this.$router.currentRoute.name.replace('-monitoring', '')}-yaml`,
-            params: this.$router.currentRoute.params,
+        case _MONITORING:
+          this.$router.applyQuery({
+            [MODE]: _UNFLAG,
+            [AS]:   _MONITORING,
           })
           break
-        case 'monitoring':
-          this.$router.push({
-            name:   `${(this.$router.currentRoute.name || '').replace('-yaml', '')}-monitoring`,
-            params: this.$router.currentRoute.params,
+        case 'yaml':
+          this.$router.applyQuery({
+            [MODE]: _UNFLAG,
+            [AS]:   _YAML,
           })
           break
         }
       },
     },
+
+    showSensitiveToggle() {
+      return !!this.value.hasSensitiveData && this.mode === _VIEW && this.as !== _YAML
+    },
+
+    managedWarning() {
+      const { value } = this
+      const labels = value?.metadata?.labels || {}
+
+      const managedBy = labels[KUBERNETES.MANAGED_BY] || ''
+      const appName = labels[KUBERNETES.MANAGED_NAME] || labels[KUBERNETES.INSTANCE] || ''
+
+      return {
+        show:    this.mode === _EDIT && managedBy.toLowerCase() === 'helm',
+        type:    value?.kind || '',
+        hasName: appName ? 'yes' : 'no',
+        appName,
+        managedBy,
+      }
+    },
   },
 
   methods: {
     get,
-    
+
     showActions() {
       this.$store.commit('action-menu/show', {
         resources: this.value,
         elem:      this.$refs.actions,
       })
     },
-  },
+
+    toggleSensitiveData(e) {
+      this.$store.dispatch('prefs/set', { key: HIDE_SENSITIVE, value: !!e })
+    }
+  }
 }
 </script>
 
@@ -167,11 +327,8 @@ export default {
     <header>
       <div class="title">
         <div class="primaryheader">
-          <h1 v-if="header">
-            {{ header }}
-          </h1>
-          <h1 v-else>
-            <nuxt-link v-if="parent.location" :to="{name: parent.location}">
+          <h1>
+            <nuxt-link v-if="parent.location" :to="parent.location">
               {{ parent.displayName }}:
             </nuxt-link>
             <span v-else>{{ parent.displayName }}:</span>
@@ -180,7 +337,9 @@ export default {
           </h1>
         </div>
         <div v-if="!isCreate" class="subheader">
-          <span v-if="namespace">{{ t("resourceDetail.masthead.namespace") }}: {{ namespace }}</span>
+          <span v-if="isNamespace && project">{{ t("resourceDetail.masthead.project") }}: {{ project.nameDisplay }}</span>
+          <span v-else-if="isWorkspace">{{ t("resourceDetail.masthead.workspace") }}: <nuxt-link :to="workspaceLocation">{{ namespace }}</nuxt-link></span>
+          <span v-else-if="namespace">{{ t("resourceDetail.masthead.namespace") }}: {{ namespace }}</span>
           <span v-if="parent.showAge">{{ t("resourceDetail.masthead.age") }}: <LiveDate class="live-date" :value="get(value, 'metadata.creationTimestamp')" /></span>
         </div>
       </div>
@@ -206,7 +365,7 @@ export default {
               ref="actions"
               aria-haspopup="true"
               type="button"
-              class="btn btn-sm role-multi-action actions"
+              class="btn btn-sm role-multi-action"
               @click="showActions"
             >
               <i class="icon icon-actions" />
@@ -215,19 +374,26 @@ export default {
         </div>
       </slot>
     </header>
+
+    <Banner v-if="banner && isView && !parent.hideBanner" class="state-banner mb-20" :color="banner.color" :label="banner.message" />
+    <Banner
+      v-if="managedWarning.show"
+      color="warning"
+      class="mb-20"
+      :label="t('resourceDetail.masthead.managedWarning', managedWarning)"
+    />
   </div>
 </template>
 
-<style lang='scss'>
+<style lang='scss' scoped>
   .masthead {
     padding-bottom: 10px;
     border-bottom: 1px solid var(--border);
     margin-bottom: 10px;
+  }
 
-    HEADER {
-      margin: 0;
-      margin-bottom: 0 !important;
-    }
+  HEADER {
+    margin: 0;
   }
 
   .primaryheader {
@@ -253,15 +419,6 @@ export default {
     }
   }
 
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-    align-items:center;
-    & .btn-group {
-      margin-right: 10px;
-    }
-  }
-
   .state-banner {
     margin: 3px 0 0 0;
   }
@@ -272,4 +429,27 @@ export default {
     position: relative;
     top: -2px;
   }
+
+  .left-right-split {
+    display: grid;
+    align-items: center;
+
+    .left-half {
+      grid-column: 1;
+    }
+
+    .right-half {
+      grid-column: 2;
+    }
+  }
+
+  .actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items:center;
+    & .btn-group {
+      margin-right: 10px;
+    }
+  }
+
 </style>

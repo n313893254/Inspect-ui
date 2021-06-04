@@ -1,5 +1,5 @@
 <script>
-import ResourceTable from '@/components/origin/ResourceTable'
+import ResourceTable from '@/components/ResourceTable'
 import Loading from '@/components/Loading'
 import AsyncButton from '@/components/AsyncButton'
 import Masthead from '@/components/ResourceList/Masthead'

@@ -1,5 +1,5 @@
 <script>
-import ResourceTable from '@/components/origin/ResourceTable'
+import ResourceTable from '@/components/ResourceTable'
 import Loading from '@/components/Loading'
 import Masthead from './Masthead'
 
@@ -18,7 +18,7 @@ export default {
 
     const inStore = store.getters['currentProduct'].inStore
     const schema = store.getters[`${ inStore }/schemaFor`](resource)
-    
+
     if ( this.hasListComponent ) {
       // If you provide your own list then call its asyncData
       const importer = store.getters['type-map/importList'](resource)

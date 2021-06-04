@@ -314,6 +314,8 @@ export const actions = {
 
     await dispatch('inspect/loadSchemas', true)
 
+    dispatch('inspect/subscribe')
+
     console.log(`Done loading Inspect`) // eslint-disable-line no-console
   },
 

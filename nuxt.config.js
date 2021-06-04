@@ -213,7 +213,7 @@ module.exports = {
     // '/k8s':       proxyWsOpts(api), // Straight to a remote cluster (/k8s/clusters/<id>/)
     // '/v3':        proxyOpts(api), // Rancher API
     // '/v3-public': proxyOpts(api), // Rancher Unauthed API
-    '/v1': proxyWsOpts(api), // Rancher Unauthed API
+    '/v1': proxyWsOpts(api),
   },
 
   // Nuxt server

@@ -29,9 +29,9 @@ export default {
       default: null
     },
 
-    forceNamespaced: {
+    namespaced: {
       type:    Boolean,
-      default: false,
+      default: null, // Automatic from schema
     },
 
     search: {
@@ -42,8 +42,8 @@ export default {
 
     tableActions: {
       // Show bulk table actions
-      type:    Boolean,
-      default: true
+      type:    [Boolean, null],
+      default: null
     },
 
     pagingLabel: {
@@ -60,26 +60,15 @@ export default {
       type:    String,
       default: 'resourceTable.groupBy.namespace',
     },
-
-    subRows: {
-      // If there are sub-rows, your main row must have <tr class="main-row"> to identify it
-      type:    Boolean,
-      default: false,
-    },
-
-    defaultSortBy: {
-      // Default field to sort by if none is specified
-      // uses name on headers
-      type:    String,
-      default: null
-    },
   },
 
   computed: {
-    namespaced() {
-      const namespaced = !!get( this.schema, 'attributes.namespaced') || this.forceNamespaced
+    isNamespaced() {
+      if ( this.namespaced !== null ) {
+        return this.namespaced
+      }
 
-      return namespaced
+      return !!get( this.schema, 'attributes.namespaced')
     },
 
     showNamespaceColumn() {
@@ -87,6 +76,18 @@ export default {
       const out = !this.showGrouping || !groupNamespaces
 
       return out
+    },
+
+    _showBulkActions() {
+      if (this.tableActions !== null) {
+        return this.tableActions
+      } else if (this.schema) {
+        const hideTableActions = this.$store.getters['type-map/hideBulkActionsFor'](this.schema)
+
+        return !hideTableActions
+      }
+
+      return false
     },
 
     _headers() {
@@ -115,7 +116,7 @@ export default {
       const isAll = this.$store.getters['isAllNamespaces']
 
       // If the resources isn't namespaced or we want ALL of them, there's nothing to do.
-      if ( !this.namespaced || isAll ) {
+      if ( !this.isNamespaced || isAll ) {
         return this.rows || []
       }
 
@@ -130,7 +131,7 @@ export default {
 
     showGrouping() {
       if ( this.groupable === null ) {
-        return this.$store.getters['isMultipleNamespaces'] && this.namespaced
+        return this.$store.getters['isMultipleNamespaces'] && this.isNamespaced
       }
 
       return this.groupable || false
@@ -187,10 +188,8 @@ export default {
     :paging="true"
     :paging-params="pagingParams"
     :paging-label="pagingLabel"
-    :table-actions="tableActions"
+    :table-actions="_showBulkActions"
     key-field="_key"
-    :sub-rows="subRows"
-    :default-sort-by="defaultSortBy"
     v-on="$listeners"
   >
     <template v-if="showGrouping" #header-middle>

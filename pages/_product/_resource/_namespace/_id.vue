@@ -1,5 +1,5 @@
 <script>
-import ResourceDetail from '@/components/origin/ResourceDetail'
+import ResourceDetail from '@/components/ResourceDetail'
 
 export default {
   name:       'ClusterResourceNamespaceId',

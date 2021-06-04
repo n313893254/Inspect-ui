@@ -63,7 +63,7 @@ export default {
           name:         'preview',
           weight:       100,
           route:        {
-            name:   'c-cluster-product-resource',
+            name:   'product-resource',
             params: {
               product:  'inspect',
               resource: 'report',

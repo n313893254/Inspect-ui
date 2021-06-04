@@ -913,19 +913,13 @@ export default {
   },
 
   _detailLocation() {
-    const schema = this.$getters['schemaFor'](this.type)
-
     const id = this.id?.replace(/.*\//, '')
-
-    const namespace = schema?.attributes?.namespaced ? '-namespace' : ''
     
     return {
-      name:   `c-cluster-product-resource${ namespace }-id`,
+      name:   `product-resource-id`,
       params: {
         product:   this.$rootGetters['productId'],
-        cluster:   this.$rootGetters['clusterId'],
         resource:  this.type,
-        namespace: this.metadata?.namespace,
         id,
       }
     }

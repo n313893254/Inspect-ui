@@ -1,15 +1,11 @@
 <script>
 import CreateEditView from '@/mixins/origin-create-edit-view/impl'
 import Loading from '@/components/Loading'
-import ResourceYaml from '@/components/ResourceYaml'
 import {
   _VIEW, _EDIT, _CLONE, _STAGE, _CREATE,
   AS, _YAML, _DETAIL, _CONFIG, PREVIEW, _MONITORING
 } from '@/config/query-params'
-import { SCHEMA } from '@/config/types'
-import { createYaml } from '@/utils/create-yaml'
-import Masthead from '@/components/origin/ResourceDetail/Masthead'
-import DetailTop from '@/components/DetailTop'
+import Masthead from '@/components/ResourceDetail/Masthead'
 import isEqual from 'lodash/isEqual'
 import { clone, set } from '@/utils/object'
 
@@ -37,8 +33,6 @@ async function getYaml(model) {
 export default {
   components: {
     Loading,
-    DetailTop,
-    ResourceYaml,
     Masthead,
   },
 
@@ -76,24 +70,7 @@ export default {
     // know about:  view, edit, create (stage and clone become "create")
     const mode = ((realMode === _STAGE || realMode === _CLONE) ? _CREATE : realMode)
 
-    const hasCustomDetail = store.getters['type-map/hasCustomDetail'](resource, id)
-    const hasCustomEdit = store.getters['type-map/hasCustomEdit'](resource, id)
-    const hasMonitoring = store.getters['type-map/hasMonitoring'](resource, id)
-    const schemas = store.getters[`${ inStore }/all`](SCHEMA)
-
-    // As determines what component will be rendered
-    const requested = route.query[AS]
     let as
-
-    if ( mode === _VIEW && hasCustomDetail && (!requested || requested === _DETAIL) ) {
-      as = _DETAIL
-    } else if ( hasCustomEdit && (!requested || requested === _CONFIG) ) {
-      as = _CONFIG
-    } else if (hasMonitoring && (!requested || requested === _MONITORING)) {
-      as = _MONITORING
-    } else {
-      as = _YAML
-    }
 
     this.as = as
 
@@ -104,59 +81,49 @@ export default {
     }
 
     const schema = store.getters[`${ inStore }/schemaFor`](resource)
-    let originalModel, model, yaml
+    let originalModel, model, yaml, report
 
-    if ( realMode === _CREATE ) {
-      if ( !namespace ) {
-        namespace = store.getters['defaultNamespace']
-      }
+    let fqid = id
 
-      const data = { type: resource }
+    if ( schema.attributes?.namespaced && namespace ) {
+      fqid = `${ namespace }/${ fqid }`
+    }
 
-      if ( schema?.attributes?.namespaced ) {
-        data.metadata = { namespace }
-      }
+    try {
+      originalModel = await store.dispatch(`${ inStore }/find`, {
+        type: resource,
+        id:   fqid,
+        opt:  { watch: true }
+      })
 
-      originalModel = await store.dispatch(`${ inStore }/create`, data)
-      // Dissassociate the original model & model. This fixes `Create` after refreshing page with SSR on
-      model = await store.dispatch(`${ inStore }/clone`, { resource: originalModel })
+      report = await this.$store.dispatch('inspect/request', {
+        url:           '/v1/reports?action=viewReport',
+        method:        'post',
+        data:          {
+          id: fqid,
+        },
+      })
 
-      if ( as === _YAML ) {
-        yaml = createYaml(schemas, resource, data)
-      }
+      console.log(report, 'report')
+    } catch(e) {
+      store.commit('setError', e)
+
+      return this.$router.push('/fail-whale')
+    }
+
+    if (realMode === _VIEW) {
+      model = originalModel
     } else {
-      let fqid = id
+      model = await store.dispatch(`${ inStore }/clone`, { resource: originalModel })
+    }
 
-      if ( schema.attributes?.namespaced && namespace ) {
-        fqid = `${ namespace }/${ fqid }`
-      }
+    if ( as === _YAML ) {
+      yaml = await getYaml(originalModel)
+    }
 
-      try {
-        originalModel = await store.dispatch(`${ inStore }/find`, {
-          type: resource,
-          id:   fqid,
-          opt:  { watch: true }
-        })
-      } catch(e) {
-        store.commit('setError', e)
-
-        return this.$router.push('/fail-whale')
-      }
-
-      if (realMode === _VIEW) {
-        model = originalModel
-      } else {
-        model = await store.dispatch(`${ inStore }/clone`, { resource: originalModel })
-      }
-
-      if ( as === _YAML ) {
-        yaml = await getYaml(originalModel)
-      }
-
-      if ( realMode === _CLONE || realMode === _STAGE ) {
-        model.cleanForNew()
-        yaml = model.cleanYaml(yaml, realMode)
-      }
+    if ( realMode === _CLONE || realMode === _STAGE ) {
+      model.cleanForNew()
+      yaml = model.cleanYaml(yaml, realMode)
     }
 
     // Ensure labels & annotations exists, since lots of things need them
@@ -173,9 +140,6 @@ export default {
     }
 
     const out = {
-      hasCustomDetail,
-      hasCustomEdit,
-      hasMonitoring,
       resource,
       as,
       yaml,
@@ -194,6 +158,11 @@ export default {
   },
 
   data() {
+    const getters = this.$store.getters
+    const params = { ...this.$route.params }
+    const resource = params.resource
+    const showMasthead = getters[`type-map/optionsFor`](resource).showListMasthead
+
     return {
       resourceSubtype: null,
 
@@ -209,6 +178,7 @@ export default {
       value:           null,
       model:           null,
       hasMonitoring:   null,
+      showMasthead:    showMasthead === undefined ? true : showMasthead,
     }
   },
 
@@ -305,43 +275,12 @@ export default {
       :mode="mode"
       :real-mode="realMode"
       :as="as"
-      :has-detail="hasCustomDetail"
-      :has-edit="hasCustomEdit"
-      :has-monitoring="hasMonitoring && value.monitoringEnabled"
+      :has-detail="false"
+      :has-edit="false"
+      :has-monitoring="false"
       :resource-subtype="resourceSubtype"
       :parent-route-override="parentRouteOverride"
       :store-override="storeOverride"
-    />
-
-    <DetailTop
-      v-if="isView && isDetail"
-      :value="originalModel"
-    />
-
-    <ResourceYaml
-      v-if="isYaml"
-      ref="resourceyaml"
-      v-model="value"
-      :mode="mode"
-      :yaml="yaml"
-      :offer-preview="offerPreview"
-      :done-route="doneRoute"
-      :done-params="doneParams"
-      :done-override="value.doneOverride"
-    />
-
-    <component
-      :is="showComponent"
-      v-else
-      ref="comp"
-      v-model="value"
-      v-bind="_data"
-      :done-params="doneParams"
-      :done-route="doneRoute"
-      :mode="mode"
-      :original-value="originalModel"
-      :real-mode="realMode"
-      @set-subtype="setSubtype"
     />
   </div>
 </template>
