@@ -425,7 +425,8 @@ export const REASON = {
   name:     'reason',
   labelKey: 'tableHeaders.reason',
   value:    'reason',
-  sort:     ['reason']
+  sort:     ['reason'],
+  width:     175
 }
 export const MESSAGE = {
   name:     'message',

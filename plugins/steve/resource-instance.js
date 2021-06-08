@@ -127,6 +127,7 @@ const STATES = {
   notready:           { color: 'warning', icon: 'tag' },
   approved:           { color: 'success', icon: 'tag' },
   rejected:           { color: 'error', icon: 'tag' },
+  danger:             { color: 'error', icon: 'tag' },
 }
 
 const SORT_ORDER = {

@@ -2,12 +2,15 @@
 import CreateEditView from '@/mixins/origin-create-edit-view/impl'
 import Loading from '@/components/Loading'
 import {
-  _VIEW, _EDIT, _CLONE, _STAGE, _CREATE,
-  AS, _YAML, _DETAIL, _CONFIG, PREVIEW, _MONITORING
+  _VIEW, _CLONE, _STAGE, _CREATE, _YAML
 } from '@/config/query-params'
 import Masthead from '@/components/ResourceDetail/Masthead'
-import isEqual from 'lodash/isEqual'
-import { clone, set } from '@/utils/object'
+import { set } from '@/utils/object'
+import ResourceTabs from '@/components/form/ResourceTabs'
+import Tab from '@/components/Tabbed/Tab'
+import SortableTable from '@/components/SortableTable'
+import Polaris from '@/components/Polaris'
+import { REASON, NAME, MESSAGE } from '@/config/table-headers'
 
 function modeFor(route) {
   if ( route.params.id ) {
@@ -34,6 +37,10 @@ export default {
   components: {
     Loading,
     Masthead,
+    ResourceTabs,
+    Tab,
+    SortableTable,
+    Polaris,
   },
 
   mixins: [CreateEditView],
@@ -146,14 +153,11 @@ export default {
       originalModel,
       mode,
       value: model,
+      report,
     }
 
     for ( const key in out ) {
       this[key] = out[key]
-    }
-
-    if ( this.realMode === _CREATE ) {
-      this.value.applyDefaults(this, realMode)
     }
   },
 
@@ -179,6 +183,12 @@ export default {
       model:           null,
       hasMonitoring:   null,
       showMasthead:    showMasthead === undefined ? true : showMasthead,
+      report:          {
+        eventResult:        [],
+        sysComponentResult: [],
+        workloadResult:     [],
+        nodeResult:           [],
+      },
     }
   },
 
@@ -188,74 +198,111 @@ export default {
       const realMode = modeFor(this.$route)
 
       return realMode
+    }, 
+
+    yamlHeaders() {
+      return [
+        {
+          name:     'name',
+          labelKey:  'generic.name',
+          value:    'name',
+          sort:     'name',
+        },
+        {
+          name:     'kind',
+          labelKey: 'generic.type',
+          value:    'kind',
+          sort:     'kind',
+        },
+        {
+          label:     '概览',
+          name:      'preview',
+          formatter: 'PodBar',
+        },
+      ]
     },
 
-    isView() {
-      return this.mode === _VIEW
+    eventHeaders() {
+      return [
+        {
+          name:          'podName',
+          labelKey:      'tableHeaders.name',
+          value:         'podName',
+          sort:          ['nameSort'],
+        },
+        REASON,
+        MESSAGE,
+        {
+          name:          'eventTime',
+          labelKey:      'tableHeaders.lastUpdated',
+          value:         'eventTime',
+          sort:          'eventTime:desc',
+          formatter:     'LiveDate',
+          formatterOpts: { addSuffix: true },
+          width:         125
+        },
+      ]
     },
 
-    isYaml() {
-      return this.as === _YAML
+    sysComponentHeaders() {
+      return [
+        {
+          name:      'severity',
+          labelKey:  'tableHeaders.state',
+          sort:      ['stateSort', 'nameSort'],
+          value:     'severity',
+          width:     100,
+          default:   'unknown',
+          formatter: 'StateFormatter',
+        },
+        {
+          name:          'name',
+          labelKey:      'tableHeaders.name',
+          value:         'name',
+          sort:          ['nameSort'],
+        },
+        MESSAGE,
+        {
+          name:      'errorTime',
+          labelKey:  'tableHeaders.lastSeen',
+          value:     'errorTime',
+          sort:      ['errorTime'],
+          formatter: 'LiveDate',
+          width:     175
+        },
+      ]
     },
 
-    isDetail() {
-      return this.as === _DETAIL
+    nodeHeaders() {
+      return [
+        {
+          name:      'nodeName',
+          labelKey:  'tableHeaders.nodeName',
+          sort:      'nodeName',
+          value:     'nodeName',
+        },
+        REASON,
+        MESSAGE,
+        {
+          name:      'heartBeatTime',
+          labelKey:  'tableHeaders.lastSeen',
+          value:     'heartBeatTime',
+          sort:      ['heartBeatTime'],
+          formatter: 'LiveDate',
+          width:     175
+        }
+      ]
     },
-
-    offerPreview() {
-      return this.as === _YAML && [_EDIT, _CLONE, _STAGE].includes(this.mode)
-    },
-
-    showComponent() {
-      switch ( this.as ) {
-      case _DETAIL: return this.detailComponent
-      case _CONFIG: return this.editComponent
-      case _MONITORING: return this.monitoringComponent
-      }
-
-      return null
-    },
-  },
-
-  watch: {
-    '$route.query'(inNeu, inOld) {
-      const neu = clone(inNeu)
-      const old = clone(inOld)
-
-      delete neu[PREVIEW]
-      delete old[PREVIEW]
-
-      if ( !this.isView ) {
-        delete neu[AS]
-        delete old[AS]
-      }
-
-      if ( !isEqual(neu, old) ) {
-        this.$fetch()
-      }
-    },
-
-    // Auto refresh YAML when the model changes
-    async 'value.metadata.resourceVersion'(a, b) {
-      if ( this.mode === _VIEW && this.as === _YAML && a && b && a !== b) {
-        this.yaml = await getYaml(this.originalModel)
-      }
-    }
   },
 
   created() {
     // eslint-disable-next-line prefer-const
-    const id = this.$route.params.id
     let resource = this.resourceOverride || this.$route.params.resource
     const options = this.$store.getters[`type-map/optionsFor`](resource)
 
     if ( options.resource ) {
       resource = options.resource
     }
-
-    this.detailComponent = this.$store.getters['type-map/importDetail'](resource, id)
-    this.editComponent = this.$store.getters['type-map/importEdit'](resource, id)
-    this.monitoringComponent = this.$store.getters['type-map/importMonitoring'](resource, id)
   },
 
   methods: {
@@ -282,5 +329,78 @@ export default {
       :parent-route-override="parentRouteOverride"
       :store-override="storeOverride"
     />
+    <ResourceTabs v-model="value" :mode="mode">
+      <Tab
+        name="yaml"
+        label-key="inspect.report.tabs.yaml.label"
+        :weight="100"
+      >
+        <SortableTable
+          :rows="report.workloadResult"
+          :headers="yamlHeaders"
+          key-field="id"
+          :table-actions="false"
+          :row-actions="false"
+          group-by="namespace"
+          group-label-key="nameNsDescription.namespace.label"
+          :sub-expand-column="true"
+          :search="false"
+          :sub-rows="true"
+          :sub-expandable="true"
+        >
+          <template #sub-row="{row, fullColspan}">
+            <Polaris 
+              :row="row"
+              :full-colspan="fullColspan"
+            />
+          </template>
+        </SortableTable>
+      </Tab>
+      <Tab
+        name="event"
+        label-key="inspect.report.tabs.event.label"
+        :weight="99"
+      >
+        <SortableTable
+          :rows="report.eventResult"
+          :headers="eventHeaders"
+          key-field="id"
+          :search="false"
+          :table-actions="false"
+          :row-actions="false"
+          default-sort-by="date"
+          group-by="namespace"
+          group-label-key="nameNsDescription.namespace.label"
+        />
+      </Tab>
+      <Tab
+        name="sysComponent"
+        label-key="inspect.report.tabs.sysComponent.label"
+        :weight="98"
+      >
+        <SortableTable
+          :rows="report.sysComponentResult"
+          :headers="sysComponentHeaders"
+          key-field="id"
+          :search="false"
+          :table-actions="false"
+          :row-actions="false"
+        />
+      </Tab>
+      <Tab
+        name="node"
+        label-key="inspect.report.tabs.node.label"
+        :weight="97"
+      >
+        <SortableTable
+          :rows="report.nodeResult"
+          :headers="nodeHeaders"
+          key-field="id"
+          :search="false"
+          :table-actions="false"
+          :row-actions="false"
+        />
+      </Tab>
+    </ResourceTabs>
   </div>
 </template>

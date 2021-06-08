@@ -226,8 +226,12 @@ export default {
     showHeaders: {
       type:    Boolean,
       default: true
-    }
+    },
 
+    groupLabelKey: {
+      type:    String,
+      default: null,
+    },
   },
 
   data() {
@@ -493,6 +497,7 @@ export default {
         :label-for="labelFor"
         :columns="columns"
         :table-actions="tableActions"
+        :collapse="collapse"
         :row-actions="rowActions"
         :sub-expand-column="subExpandColumn"
         :row-actions-width="rowActionsWidth"
@@ -528,6 +533,9 @@ export default {
             <td :colspan="fullColspan">
               <slot name="group-by" :group="group">
                 <div v-trim-whitespace class="group-tab">
+                  <span v-if="groupLabelKey" class="mr-5">
+                    <t :k="groupLabelKey" />:
+                  </span>
                   {{ group.ref }}
                 </div>
               </slot>

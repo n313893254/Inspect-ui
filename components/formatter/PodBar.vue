@@ -16,20 +16,36 @@ export default {
 
   computed: {
     summary() {
-      const map = this.pods.reduce((sum, item) => {
-        const state = item?.metadata?.state?.name
-
-        return {
-          ...sum,
-          [state]: (sum[state] || 0) + 1
+      const map = this.messages.reduce((sum, item) => {
+        const { success, severity } = item
+        
+        if (success) {
+          return {
+            ...sum,
+            success: (sum['success'] || 0) + 1
+          }
+        } else {
+          return {
+            ...sum,
+            [severity]: (sum[severity] || 0) + 1
+          }
         }
       }, {}) || {}
 
       return map
     },
 
-    pods() {
-      return this.row.pods || []
+    messages() {
+      const workloadMessages = this.row?.messageResult || []
+      const podMessages = this.row?.podResult?.messageResult || []
+      const container = this.row?.podResult?.containerResult[0] || {}
+      const containerMessage = container?.messageResult || []
+
+      return [
+        ...workloadMessages, 
+        ...podMessages,
+        ...containerMessage,
+      ]
     },
 
     show() {

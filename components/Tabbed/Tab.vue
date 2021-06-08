@@ -1,29 +1,61 @@
 <script>
 export default {
-  inject: ['addTab', 'removeTab'],
+  inject: ['addTab', 'removeTab', 'sideTabs'],
 
   props: {
     label: {
-      type:     String,
-      required: true,
+      default: null,
+      type:    String
+    },
+    labelKey: {
+      default: null,
+      type:    String
     },
     name: {
-      type:     String,
       required: true,
+      type:     String
+    },
+    tooltip: {
+      default: null,
+      type:    [String, Object]
     },
     weight: {
-      type:     Number,
       default:  0,
       required: false,
+      type:     Number
     },
-    canToggle: {
+
+    showHeader: {
       type:    Boolean,
-      default: false
+      default: null, // Default true for side-tabs, false for top.
     }
   },
 
   data() {
     return { active: null }
+  },
+
+  computed: {
+    labelDisplay() {
+      console.log(this.labelKey, 'this.labelKey')
+      if ( this.labelKey ) {
+        return this.$store.getters['i18n/t'](this.labelKey)
+      }
+
+      if ( this.label ) {
+        return this.label
+      }
+
+      return this.name
+    },
+
+    shouldShowHeader() {
+      if ( this.showHeader !== null ) {
+        return this.showHeader
+      }
+
+      return this.sideTabs || false
+    }
   },
 
   watch: {
@@ -51,6 +83,10 @@ export default {
     :aria-hidden="!active"
     role="tabpanel"
   >
-    <slot />
+    <h2 v-if="shouldShowHeader">
+      {{ label }}
+      <i v-if="tooltip" v-tooltip="tooltip" class="icon icon-info icon-lg" />
+    </h2>
+    <slot v-bind="{active}" />
   </section>
 </template>

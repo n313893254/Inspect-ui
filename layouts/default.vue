@@ -59,7 +59,7 @@ export default {
       const out = [{
         children: [{
           label:        'report',
-          labelDisplay: `<i class="icon icon-fw icon-preview mr-5"></i>报告`,
+          labelDisplay: `<i class="icon icon-fw icon-preview mr-5"></i>报表`,
           name:         'preview',
           weight:       100,
           route:        {

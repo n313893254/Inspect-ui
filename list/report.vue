@@ -3,6 +3,7 @@ import ResourceTable from '@/components/ResourceTable'
 import Loading from '@/components/Loading'
 import AsyncButton from '@/components/AsyncButton'
 import Masthead from '@/components/ResourceList/Masthead'
+import { NAME } from '@/config/table-headers'
 
 export default {
   components: {
@@ -55,7 +56,19 @@ export default {
 
   computed: {
     headers() {
-      return this.$store.getters['type-map/headersFor'](this.schema)
+      return [
+        NAME,
+        {
+          name:      'createdTime',
+          labelKey:  'tableHeaders.age',
+          value:     'createdTime',
+          sort:      'createdTime:desc',
+          search:    false,
+          formatter: 'LiveDate',
+          width:     75,
+          align:     'right'
+        },
+      ]
     },
 
     groupBy() {

@@ -30,7 +30,7 @@ export default {
       default: false
     },
 
-    tabsUseHistoryReplace: {
+    useHash: {
       type:    Boolean,
       default: true,
     }
@@ -40,6 +40,8 @@ export default {
     const tabs = this.tabs
 
     return {
+      sideTabs: this.sideTabs,
+
       addTab(tab) {
         const existing = findBy(tabs, 'name', tab.name)
 
@@ -66,10 +68,7 @@ export default {
   computed: {
     // keep the tabs list ordered for dynamic tabs
     sortedTabs() {
-      const { tabs } = this
-      const shownTabs = tabs.filter(tab => !tab.canToggle)
-
-      return sortBy(shownTabs, ['weight:desc', '$attrs.weight:desc', 'label', 'name'])
+      return sortBy(this.tabs, ['weight:desc', 'labelDisplay', 'name'])
     },
   },
 
@@ -77,6 +76,7 @@ export default {
     sortedTabs(tabs) {
       const {
         defaultTab,
+        useHash,
         $route: { hash }
       } = this
       const activeTab = tabs.find(t => t.active)
@@ -86,48 +86,29 @@ export default {
       const firstTab = head(tabs) || null
 
       if (isEmpty(activeTab)) {
-        if (!isEmpty(windowHashTabMatch)) {
+        if (useHash && !isEmpty(windowHashTabMatch)) {
           this.select(windowHashTabMatch.name)
         } else if (!isEmpty(defaultTab) && !isEmpty(tabs.find(t => t.name === defaultTab))) {
           this.select(defaultTab)
         } else if (firstTab?.name) {
           this.select(firstTab.name)
         }
-      } else if (activeTab?.name === windowHash) {
+      } else if (useHash && activeTab?.name === windowHash) {
         this.select(activeTab.name)
       }
     },
   },
 
   mounted() {
-    window.addEventListener('hashchange', this.hashChange)
-
-    this.$nextTick(() => {
-      const {
-        $route: { hash },
-        defaultTab,
-        sortedTabs,
-      } = this
-
-      let tab
-      const selected = (hash || '').replace(/^#/, '')
-
-      if ( selected ) {
-        tab = this.find(selected)
-      }
-
-      if ( !tab ) {
-        tab = this.find(defaultTab)
-      }
-
-      if ( !tab ) {
-        tab = head(sortedTabs)
-      }
-    })
+    if ( this.useHash ) {
+      window.addEventListener('hashchange', this.hashChange)
+    }
   },
 
   unmounted() {
-    window.removeEventListener('hashchange', this.hashChange)
+    if ( this.useHash ) {
+      window.removeEventListener('hashchange', this.hashChange)
+    }
   },
 
   methods: {
@@ -150,7 +131,6 @@ export default {
     select(name/* , event */) {
       const {
         sortedTabs,
-        tabsUseHistoryReplace,
         $route: { hash: routeHash },
         $router: { currentRoute },
       } = this
@@ -162,16 +142,12 @@ export default {
         return
       }
 
-      if (routeHash !== hashName) {
+      if (this.useHash && routeHash !== hashName) {
         const kurrentRoute = { ...currentRoute }
 
         kurrentRoute.hash = hashName
 
-        if (tabsUseHistoryReplace) {
-          this.$router.replace(kurrentRoute)
-        } else {
-          this.$router.push(kurrentRoute)
-        }
+        this.$router.replace(kurrentRoute)
       }
 
       for ( const tab of sortedTabs ) {
@@ -246,16 +222,16 @@ export default {
           role="tab"
           @click.prevent="select(tab.name, $event)"
         >
-          {{ tab.label }}
+          {{ tab.labelDisplay }}
         </a>
       </li>
       <ul v-if="sideTabs && showTabsAddRemove" class="tab-list-footer">
         <li>
           <button type="button" class="btn bg-transparent" @click="tabAddClicked">
-            <i class="icon icon-plus" />
+            <i class="icon icon-plus icon-lg" />
           </button>
           <button type="button" class="btn bg-transparent" @click="tabRemoveClicked">
-            <i class="icon icon-minus" />
+            <i class="icon icon-minus icon-lg" />
           </button>
         </li>
       </ul>
@@ -274,6 +250,12 @@ export default {
 
     &:focus {
      outline:none;
+
+      & .tab.active {
+        outline-color: var(--outline);
+        outline-style: solid;
+        outline-width: var(--outline-width);
+      }
     }
 
     .tab {
@@ -363,12 +345,12 @@ export default {
           }
 
           button:first-of-type {
-            border-top: solid thin var(--border);
-            border-right: solid thin var(--border);
+            border-top: solid 1px var(--border);
+            border-right: solid 1px var(--border);
             border-top-right-radius: 0;
           }
           button:last-of-type {
-            border-top: solid thin var(--border);
+            border-top: solid 1px var(--border);
             border-top-left-radius: 0;
           }
 

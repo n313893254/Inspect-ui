@@ -10,7 +10,7 @@ on:
 jobs:
   # build job 我们用来做持续构建
   build:
-    if: ${{ github.repository == 'cnrancher/redis-operator-ui'}}
+    if: ${{ github.repository == 'n313893254/inspect-ui'}}
     # 构建运行的环境
     runs-on: ubuntu-latest
     # 构建步骤
@@ -31,4 +31,4 @@ jobs:
         access-key-id: ${{ secrets.ACCESS_KEY_ID }}
         access-key-secret: ${{ secrets.ACCESS_KEY_SECRET }}
     - name: Deply To OSS
-      run: ossutil cp dist oss://haruna/ -rf
+      run: ossutil cp dist oss://haruna/inspect -rf
