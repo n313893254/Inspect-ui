@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+cd $(dirname $0)/..
+
+yarn --pure-lockfile install
+DIR="latest"
+
+NUXT_ENV_commit=${COMMIT} NUXT_ENV_version=${VERSION} OUTPUT_DIR=dist/${DIR} ROUTER_BASE="/" RESOURCE_BASE="./" yarn run build --spa
+TARBALL=${DIR}.tar.gz
+tar -czf dist/${TARBALL} dist/${DIR}/
