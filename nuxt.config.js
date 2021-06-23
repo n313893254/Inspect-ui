@@ -76,7 +76,7 @@ module.exports = {
 
   // Axios: https://axios.nuxtjs.org/options
   axios: {
-    https:          true,
+    https:          false,
     proxy:          true,
     retry:          { retries: 0 },
     // debug:   true
@@ -215,16 +215,6 @@ module.exports = {
     // '/v3-public': proxyOpts(api), // Rancher Unauthed API
     '/v1': proxyWsOpts(api),
   },
-
-  // Nuxt server
-  server: {
-    https: (dev ? {
-      key:  fs.readFileSync(path.resolve(__dirname, 'server/server.key')),
-      cert: fs.readFileSync(path.resolve(__dirname, 'server/server.crt'))
-    } : null),
-    port:      (dev ? 8015 : 80),
-    host:      '0.0.0.0',
-  },
 }
 
 function proxyOpts(target) {
@@ -247,7 +237,7 @@ function proxyWsOpts(target) {
 
 function onProxyReq(proxyReq, req) {
   proxyReq.setHeader('x-api-host', req.headers['host'])
-  proxyReq.setHeader('x-forwarded-proto', 'https')
+  proxyReq.setHeader('x-forwarded-proto', 'http')
   // console.log(proxyReq.getHeaders())
 }
 
@@ -255,7 +245,7 @@ function onProxyReqWs(proxyReq, req, socket, options, head) {
   req.headers.origin = options.target.href
   proxyReq.setHeader('origin', options.target.href)
   proxyReq.setHeader('x-api-host', req.headers['host'])
-  proxyReq.setHeader('x-forwarded-proto', 'https')
+  proxyReq.setHeader('x-forwarded-proto', 'http')
   // console.log(proxyReq.getHeaders());
 
   socket.on('error', (err) => {

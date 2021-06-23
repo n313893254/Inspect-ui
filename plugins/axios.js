@@ -15,17 +15,6 @@ export default function({
   }
 
   if ( isDev ) {
-    // https://github.com/nuxt-community/axios-module/blob/dev/lib/module.js#L78
-    // forces localhost to http, for no obvious reason.
-    if ( $axios.defaults.baseURL.startsWith('http://') ) {
-      $axios.defaults.baseURL = $axios.defaults.baseURL.replace(/^http:/, 'https:')
-    }
-
-    const insecureAgent = new https.Agent({ rejectUnauthorized: false })
-
-    $axios.defaults.httpsAgent = insecureAgent
-    $axios.httpsAgent = insecureAgent
-
     $axios.onError((error) => {
       const code = parseInt(error.response && error.response.status, 10)
 

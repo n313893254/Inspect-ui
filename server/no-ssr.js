@@ -1,7 +1,7 @@
 import { URL } from 'url'
 
 export default function(req, res, next) {
-  const parsed = new URL(req.url, 'https://localhost')
+  const parsed = new URL(req.url, 'http://localhost')
 
   if ( parsed.searchParams.has('spa') ) {
     res.spa = true
