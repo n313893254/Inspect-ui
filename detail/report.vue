@@ -10,7 +10,7 @@ import ResourceTabs from '@/components/form/ResourceTabs'
 import Tab from '@/components/Tabbed/Tab'
 import SortableTable from '@/components/SortableTable'
 import Polaris from '@/components/Polaris'
-import { REASON, NAME, MESSAGE } from '@/config/table-headers'
+import { REASON, MESSAGE } from '@/config/table-headers'
 
 function modeFor(route) {
   if ( route.params.id ) {
