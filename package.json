@@ -1,5 +1,5 @@
 {
-  "name": "essence-ui",
+  "name": "inspect-ui",
   "scripts": {
     "nuxt": "./node_modules/.bin/nuxt",
     "dev": "./node_modules/.bin/nuxt dev",
