@@ -93,9 +93,7 @@ module.exports = {
     title: process.env.npm_package_name || '',
     meta:  [
       { 
-        charset:      'utf-8',
-        'http-equiv': 'Content-Security-Policy',
-        content:      'upgrade-insecure-requests',
+        charset: 'utf-8',
       },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       {
