@@ -1,5 +1,3 @@
-import fs from 'fs'
-import path from 'path'
 import { directiveSsr as t } from './plugins/i18n'
 import { trimWhitespaceSsr as trimWhitespace } from './plugins/trim-whitespace'
 
@@ -9,7 +7,6 @@ const version = process.env.VERSION ||
   require('./package.json').version
 
 const dev = (process.env.NODE_ENV !== 'production')
-const pl = process.env.PL
 const commit = process.env.COMMIT || 'head'
 
 let api = process.env.API || 'https://0.0.0.0:8443'
@@ -239,7 +236,7 @@ function onProxyReq(proxyReq, req) {
   // console.log(proxyReq.getHeaders())
 }
 
-function onProxyReqWs(proxyReq, req, socket, options, head) {
+function onProxyReqWs(proxyReq, req, socket, options) {
   req.headers.origin = options.target.href
   proxyReq.setHeader('origin', options.target.href)
   proxyReq.setHeader('x-api-host', req.headers['host'])
