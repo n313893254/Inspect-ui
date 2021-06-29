@@ -174,9 +174,9 @@ export default {
       const displayName = this.$store.getters['type-map/labelFor'](this.schema)
 
       const location = {
-        name:   `c-cluster-product-resource`,
+        name:   `product-resource`,
         params: {
-          product:  'redis',
+          product:  'inspect',
           resource: this.resource,
         }
       }
