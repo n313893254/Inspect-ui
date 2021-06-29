@@ -110,8 +110,6 @@ export default {
           id: fqid,
         },
       })
-
-      console.log(report, 'report')
     } catch(e) {
       store.commit('setError', e)
 
@@ -275,6 +273,15 @@ export default {
 
     nodeHeaders() {
       return [
+        {
+          name:      'severity',
+          labelKey:  'tableHeaders.state',
+          sort:      ['stateSort', 'nameSort'],
+          value:     'severity',
+          width:     100,
+          default:   'unknown',
+          formatter: 'StateFormatter',
+        },
         {
           name:      'nodeName',
           labelKey:  'tableHeaders.nodeName',
